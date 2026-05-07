@@ -1,0 +1,193 @@
+/* ─── GPT Helper — content styles ────────────────────────────────────────── */
+
+/* Smooth conversation switch: ChatGPT's main panel gets a fade-in on nav */
+main {
+  animation: gpt-fadein 200ms ease-out;
+}
+@keyframes gpt-fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Pre-promote scroll container to compositor layer for silky scrolling */
+main [class*="react-scroll-to-bottom"],
+main [class*="overflow-y-auto"] {
+  will-change: transform;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Disable all animations when user prefers reduced motion OR toggle is off */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+.gpt-helper-no-anim *, .gpt-helper-no-anim *::before, .gpt-helper-no-anim *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ─── Collapse wrapper ───────────────────────────────────────────────────── */
+.gpt-collapse-wrapper {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: max-height 240ms ease-out;
+}
+
+/* Code block wrapper */
+.gpt-code-wrapper pre {
+  margin: 0;
+  transition: max-height 240ms ease-out, opacity 240ms ease-out;
+}
+.gpt-code-wrapper.collapsed pre {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+.gpt-code-wrapper:not(.collapsed) pre {
+  max-height: 9999px;
+  opacity: 1;
+}
+
+/* Message wrapper */
+.gpt-msg-wrapper {
+  margin: 0;
+}
+.gpt-msg-wrapper .markdown,
+.gpt-msg-wrapper [class*="prose"] {
+  transition: max-height 240ms ease-out, opacity 240ms ease-out;
+  overflow: hidden;
+}
+.gpt-msg-wrapper.collapsed .markdown,
+.gpt-msg-wrapper.collapsed [class*="prose"] {
+  max-height: 4.8em; /* ~3 lines */
+  opacity: 0.85;
+  -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+}
+.gpt-msg-wrapper:not(.collapsed) .markdown,
+.gpt-msg-wrapper:not(.collapsed) [class*="prose"] {
+  max-height: 9999px;
+  opacity: 1;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* ─── Collapse header (code blocks) ─────────────────────────────────────── */
+.gpt-collapse-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  user-select: none;
+}
+@media (prefers-color-scheme: dark) {
+  .gpt-collapse-header { background: rgba(255,255,255,0.07); }
+}
+
+.gpt-lang-tag {
+  color: #6b7280;
+  font-weight: 600;
+}
+.gpt-line-count {
+  color: #9ca3af;
+  flex: 1;
+}
+
+/* ─── Toggle buttons ─────────────────────────────────────────────────────── */
+.gpt-toggle-btn {
+  background: none;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 150ms, background 150ms;
+}
+.gpt-toggle-btn:hover { opacity: 1; background: rgba(0,0,0,0.06); }
+@media (prefers-color-scheme: dark) {
+  .gpt-toggle-btn { border-color: rgba(255,255,255,0.2); }
+  .gpt-toggle-btn:hover { background: rgba(255,255,255,0.08); }
+}
+
+/* Message footer expand button */
+.gpt-msg-footer {
+  padding: 4px 0;
+  text-align: center;
+}
+
+/* ─── FAB ────────────────────────────────────────────────────────────────── */
+#gpt-helper-fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+#gpt-fab-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #10a37f; /* ChatGPT brand green */
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  transition: transform 150ms, box-shadow 150ms;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#gpt-fab-icon:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
+#gpt-fab-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+#gpt-helper-fab.open #gpt-fab-menu {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#gpt-fab-menu button {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  transition: background 120ms;
+  white-space: nowrap;
+  text-align: left;
+}
+#gpt-fab-menu button:hover { background: #f3f4f6; }
+
+@media (prefers-color-scheme: dark) {
+  #gpt-fab-menu button {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #f3f4f6;
+  }
+  #gpt-fab-menu button:hover { background: #3a3a3a; }
+}

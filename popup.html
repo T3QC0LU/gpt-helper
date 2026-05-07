@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPT Helper Settings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 260px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      color: #111;
+      background: #fff;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1e1e1e; color: #f3f4f6; }
+      input[type=number] { background: #2d2d2d; border-color: #444; color: #f3f4f6; }
+    }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+    label { display: block; margin-bottom: 10px; }
+    label span { display: block; margin-bottom: 4px; color: #6b7280; }
+    input[type=number] {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .toggle-row span { color: #6b7280; }
+    input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+    #status {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #10a37f;
+      min-height: 16px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ GPT Helper</h1>
+
+  <label>
+    <span>Code block collapse threshold (lines)</span>
+    <input type="number" id="codeBlockThreshold" min="1" max="500" />
+  </label>
+
+  <label>
+    <span>Message collapse threshold (chars)</span>
+    <input type="number" id="messageThreshold" min="50" max="5000" />
+  </label>
+
+  <div class="toggle-row">
+    <span>Animations enabled</span>
+    <input type="checkbox" id="animationsEnabled" />
+  </div>
+
+  <div id="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
