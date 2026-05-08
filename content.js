@@ -39,13 +39,16 @@ let observer = null;
 let isStreaming = false;
 
 const SELECTORS = {
-  // ChatGPT renders messages in article elements inside a main scroll container
   messageList: 'main [class*="react-scroll-to-bottom"]',
   messageListFallback: 'main',
-  // Each turn is an article
-  article: 'article[data-testid^="conversation-turn"]',
-  // The streaming indicator SVG that appears while AI is typing
-  streamingIndicator: '[data-testid="stop-button"], button[aria-label="Stop streaming"]',
+  // ChatGPT uses both article and div depending on version
+  article: [
+    'article[data-testid^="conversation-turn"]',
+    'div[data-testid^="conversation-turn"]',
+  ].join(', '),
+  // Prose content inside a message — try multiple ChatGPT class patterns
+  prose: '.markdown.prose, .markdown, [class*="prose"], [class*="message-content"]',
+  streamingIndicator: '[data-testid="stop-button"], button[aria-label="Stop streaming"], button[aria-label="停止生成"]',
 };
 
 function getMessageList() {
@@ -165,21 +168,23 @@ function toggleBlock(wrapper) {
 }
 
 // ─── Long message collapse ────────────────────────────────────────────────────
-function collapseMessage(article) {
+function collapseMessage(article, force = false) {
   // Only collapse completed (non-streaming) messages
   if (article.dataset.gptMsgCollapsed) return;
 
   // Find the prose container (ChatGPT wraps message text in a div.markdown)
-  const prose = article.querySelector('.markdown, [class*="prose"]');
+  const prose = article.querySelector(SELECTORS.prose);
   if (!prose) return;
 
   const text = prose.textContent || '';
   if (text.length <= settings.messageThreshold) return;
 
-  // Skip the latest message (the one currently being answered)
-  const articles = [...document.querySelectorAll(SELECTORS.article)];
-  const isLatest = articles[articles.length - 1] === article;
-  if (isLatest) return;
+  // Skip the latest message unless forced (e.g. from FAB "Collapse all")
+  if (!force) {
+    const articles = [...document.querySelectorAll(SELECTORS.article)];
+    const isLatest = articles[articles.length - 1] === article;
+    if (isLatest) return;
+  }
 
   article.dataset.gptMsgCollapsed = 'true';
 
@@ -203,13 +208,21 @@ function autoCollapseAll() {
   const articles = [...document.querySelectorAll(SELECTORS.article)];
   // Leave the last two (user prompt + streaming AI reply) untouched
   const toCollapse = articles.slice(0, -2);
-
   toCollapse.forEach((article) => {
-    // Collapse oversized code blocks inside this message
     article.querySelectorAll('pre').forEach(collapseCodeBlock);
-    // Collapse the message itself if it's long
-    collapseMessage(article);
+    collapseMessage(article, false);
   });
+}
+
+// Collapse every message in the conversation (called from FAB "Collapse all")
+function collapseAllNow() {
+  const articles = [...document.querySelectorAll(SELECTORS.article)];
+  articles.forEach((article) => {
+    article.querySelectorAll('pre').forEach(collapseCodeBlock);
+    collapseMessage(article, true); // force = skip "is latest" guard
+  });
+  // Also collapse any wrappers that were created but not yet folded
+  document.querySelectorAll('.gpt-collapse-wrapper:not(.collapsed)').forEach(collapseCodeBlockWrapper);
 }
 
 // ─── FAB (Floating Action Button) ────────────────────────────────────────────
@@ -234,7 +247,7 @@ function injectFAB() {
   });
 
   document.getElementById('gpt-collapse-all').addEventListener('click', () => {
-    document.querySelectorAll('.gpt-collapse-wrapper:not(.collapsed)').forEach(collapseCodeBlockWrapper);
+    collapseAllNow();
     fab.classList.remove('open');
   });
 
@@ -254,5 +267,6 @@ loadSettings(() => {
   applyAnimationClass();
   startObserver();
   injectFAB();
-  console.log('[GPT Helper] v0.1 loaded ⚡', settings);
+  const articleCount = document.querySelectorAll(SELECTORS.article).length;
+  console.log(`[GPT Helper] v0.1 loaded ⚡ — found ${articleCount} message(s)`, settings);
 });
