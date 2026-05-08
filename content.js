@@ -165,7 +165,7 @@ function collapseCodeBlock(pre) {
   header.innerHTML = `
     <span class="gpt-lang-tag">${lang}</span>
     <span class="gpt-line-count">${lines} lines</span>
-    <button class="gpt-toggle-btn" aria-expanded="false">Expand ▼</button>
+    <button class="gpt-toggle-btn" aria-expanded="false">Show code ▼</button>
   `;
   wrapper.insertBefore(header, pre);
 
@@ -177,13 +177,13 @@ function collapseCodeBlock(pre) {
 function expandCodeBlock(wrapper) {
   wrapper.classList.remove('collapsed');
   const btn = wrapper.querySelector('.gpt-toggle-btn');
-  if (btn) { btn.textContent = 'Collapse ▲'; btn.setAttribute('aria-expanded', 'true'); }
+  if (btn) { btn.textContent = 'Hide code ▲'; btn.setAttribute('aria-expanded', 'true'); }
 }
 
 function collapseCodeBlockWrapper(wrapper) {
   wrapper.classList.add('collapsed');
   const btn = wrapper.querySelector('.gpt-toggle-btn');
-  if (btn) { btn.textContent = 'Expand ▼'; btn.setAttribute('aria-expanded', 'false'); }
+  if (btn) { btn.textContent = 'Show code ▼'; btn.setAttribute('aria-expanded', 'false'); }
 }
 
 function toggleBlock(wrapper) {
@@ -219,7 +219,7 @@ function collapseMessage(article, force = false) {
 
   const footer = document.createElement('div');
   footer.className = 'gpt-msg-footer';
-  footer.innerHTML = `<button class="gpt-toggle-btn" aria-expanded="false">Expand ▼</button>`;
+  footer.innerHTML = `<button class="gpt-toggle-btn" aria-expanded="false">Show more ↓</button>`;
   wrapper.appendChild(footer);
 
   footer.querySelector('.gpt-toggle-btn').addEventListener('click', () => {
