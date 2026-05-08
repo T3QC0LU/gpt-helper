@@ -88,19 +88,27 @@ function startObserver() {
   console.log('[GPT Helper] MutationObserver active');
 }
 
-// Re-init on SPA navigation (ChatGPT swaps the URL without a full page load)
-let lastUrl = location.href;
-const navObserver = new MutationObserver(() => {
-  if (location.href !== lastUrl) {
-    lastUrl = location.href;
+// Re-init on SPA navigation using history API interception (no MutationObserver polling)
+let navTimer = null;
+function onNavigate() {
+  clearTimeout(navTimer);
+  navTimer = setTimeout(() => {
     isStreaming = false;
-    setTimeout(() => {
-      startObserver();
-      injectFAB();
-    }, 800); // wait for React to render the new conversation
-  }
+    startObserver();
+    // Only re-inject FAB if it was removed by the page transition
+    if (!document.getElementById('gpt-helper-fab')) injectFAB();
+  }, 600);
+}
+
+// Intercept pushState / replaceState (React Router / Next.js use these)
+['pushState', 'replaceState'].forEach((method) => {
+  const orig = history[method];
+  history[method] = function (...args) {
+    orig.apply(this, args);
+    onNavigate();
+  };
 });
-navObserver.observe(document.body, { childList: true, subtree: true });
+window.addEventListener('popstate', onNavigate);
 
 // ─── Code block collapse ──────────────────────────────────────────────────────
 function collapseCodeBlock(pre) {
