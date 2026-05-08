@@ -45,10 +45,13 @@ const SELECTORS = {
   article: [
     'article[data-testid^="conversation-turn"]',
     'div[data-testid^="conversation-turn"]',
+    '[data-message-author-role]',        // fallback: individual message bubbles
   ].join(', '),
-  // Prose content inside a message — try multiple ChatGPT class patterns
-  prose: '.markdown.prose, .markdown, [class*="prose"], [class*="message-content"]',
+  // Prose content inside a message
+  prose: '.markdown.prose, .markdown, [class*="prose"], [class*="message-content"], [data-message-author-role] > div',
   streamingIndicator: '[data-testid="stop-button"], button[aria-label="Stop streaming"], button[aria-label="停止生成"]',
+  // CodeMirror-rendered code blocks (ChatGPT's current renderer)
+  codeBlock: 'pre[class*="cm-"], pre.cm-content, pre:has(code)',
 };
 
 function getMessageList() {
@@ -114,19 +117,40 @@ function onNavigate() {
 window.addEventListener('popstate', onNavigate);
 
 // ─── Code block collapse ──────────────────────────────────────────────────────
+function countCodeLines(pre) {
+  // CodeMirror: lines are separated by <br> tags inside spans
+  const brs = pre.querySelectorAll('br').length;
+  if (brs > 0) return brs + 1;
+  // Standard: count newlines in textContent
+  return (pre.textContent || '').split('\n').filter((l, i, a) =>
+    !(i === a.length - 1 && l === '')
+  ).length;
+}
+
+function detectLanguage(pre) {
+  // CodeMirror puts language in a sibling/parent element or data attribute
+  const container = pre.closest('[class*="language-"], [data-lang], [class*="lang-"]');
+  if (container) {
+    const cls = [...container.classList].find(c => c.startsWith('language-') || c.startsWith('lang-'));
+    if (cls) return cls.replace(/^(language-|lang-)/, '');
+    if (container.dataset.lang) return container.dataset.lang;
+  }
+  // Try the pre itself or its code child
+  const code = pre.querySelector('code');
+  const target = code || pre;
+  const cls = [...(target.classList || [])].find(c =>
+    c.startsWith('language-') || c.startsWith('lang-')
+  );
+  return cls ? cls.replace(/^(language-|lang-)/, '') : 'code';
+}
+
 function collapseCodeBlock(pre) {
   if (pre.dataset.gptCollapsed) return;
-  const code = pre.querySelector('code');
-  if (!code) return;
 
-  const lines = code.textContent.split('\n').length;
+  const lines = countCodeLines(pre);
   if (lines <= settings.codeBlockThreshold) return;
 
-  // Detect language from class (e.g. "language-python")
-  const langMatch = [...(code.classList || [])].find((c) =>
-    c.startsWith('language-')
-  );
-  const lang = langMatch ? langMatch.replace('language-', '') : 'code';
+  const lang = detectLanguage(pre);
 
   pre.dataset.gptCollapsed = 'true';
   pre.dataset.gptLines = lines;
@@ -206,22 +230,30 @@ function collapseMessage(article, force = false) {
 // ─── Auto-collapse all eligible old messages ──────────────────────────────────
 function autoCollapseAll() {
   const articles = [...document.querySelectorAll(SELECTORS.article)];
-  // Leave the last two (user prompt + streaming AI reply) untouched
-  const toCollapse = articles.slice(0, -2);
-  toCollapse.forEach((article) => {
-    article.querySelectorAll('pre').forEach(collapseCodeBlock);
-    collapseMessage(article, false);
-  });
+  if (articles.length > 0) {
+    // Leave the last two (user prompt + streaming AI reply) untouched
+    articles.slice(0, -2).forEach((article) => {
+      article.querySelectorAll(SELECTORS.codeBlock).forEach(collapseCodeBlock);
+      collapseMessage(article, false);
+    });
+  } else {
+    // Fallback: no article selector matched, collapse all code blocks on page
+    document.querySelectorAll(SELECTORS.codeBlock).forEach(collapseCodeBlock);
+  }
 }
 
 // Collapse every message in the conversation (called from FAB "Collapse all")
 function collapseAllNow() {
   const articles = [...document.querySelectorAll(SELECTORS.article)];
-  articles.forEach((article) => {
-    article.querySelectorAll('pre').forEach(collapseCodeBlock);
-    collapseMessage(article, true); // force = skip "is latest" guard
-  });
-  // Also collapse any wrappers that were created but not yet folded
+  if (articles.length > 0) {
+    articles.forEach((article) => {
+      article.querySelectorAll(SELECTORS.codeBlock).forEach(collapseCodeBlock);
+      collapseMessage(article, true);
+    });
+  } else {
+    // Fallback: collapse all code blocks on page directly
+    document.querySelectorAll(SELECTORS.codeBlock).forEach(collapseCodeBlock);
+  }
   document.querySelectorAll('.gpt-collapse-wrapper:not(.collapsed)').forEach(collapseCodeBlockWrapper);
 }
 
@@ -268,5 +300,6 @@ loadSettings(() => {
   startObserver();
   injectFAB();
   const articleCount = document.querySelectorAll(SELECTORS.article).length;
-  console.log(`[GPT Helper] v0.1 loaded ⚡ — found ${articleCount} message(s)`, settings);
+  const codeBlockCount = document.querySelectorAll(SELECTORS.codeBlock).length;
+  console.log(`[GPT Helper] v0.1 loaded ⚡ — ${articleCount} turn(s), ${codeBlockCount} code block(s)`, settings);
 });
